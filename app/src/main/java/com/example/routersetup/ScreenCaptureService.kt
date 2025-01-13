@@ -11,20 +11,24 @@ import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
+import android.util.Log
 import androidx.core.app.NotificationCompat
 
 class ScreenCaptureService : Service() {
-
     private lateinit var projectionManager: MediaProjectionManager
     private var mediaProjection: MediaProjection? = null
 
+    private const val TAG = "ScreenCaptureService"
+
     override fun onCreate() {
         super.onCreate()
+        Log.d(TAG, "onCreate called")
         projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startForegroundServiceWithNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        Log.d(TAG, "onStartCommand called")
+
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: return START_NOT_STICKY
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra("data", Intent::class.java)
@@ -34,9 +38,12 @@ class ScreenCaptureService : Service() {
         }
 
         if (resultCode == Activity.RESULT_OK && data != null) {
+            Log.d(TAG, "MediaProjection obtained successfully")
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
+            startForegroundServiceWithNotification()
             // Здесь начните захват экрана или инициализируйте WebRTC
         } else {
+            Log.e(TAG, "MediaProjection not obtained")
             stopSelf()
         }
 
@@ -64,6 +71,7 @@ class ScreenCaptureService : Service() {
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
+        Log.d(TAG, "Foreground service started with notification")
         startForeground(1, notification)
     }
 
@@ -73,6 +81,7 @@ class ScreenCaptureService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
+        Log.d(TAG, "onDestroy called")
         stopForeground(STOP_FOREGROUND_REMOVE)
         mediaProjection?.stop()
         mediaProjection = null

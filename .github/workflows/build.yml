@@ -22,6 +22,16 @@ jobs:
         distribution: 'zulu'
         java-version: '17'
 
+    - name: Install Android SDK Command Line Tools
+      run: |
+        mkdir -p $HOME/android-sdk/cmdline-tools
+        curl -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-9477386_latest.zip
+        unzip commandlinetools.zip -d $HOME/android-sdk/cmdline-tools
+        mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+        export ANDROID_HOME=$HOME/android-sdk
+        export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        sdkmanager --install "build-tools;34.0.0" "platform-tools" "platforms;android-34"
+
     - name: Cache Gradle dependencies
       uses: actions/cache@v3
       with:
@@ -38,10 +48,7 @@ jobs:
 
     - name: Verify APK version
       run: |
-        sudo apt-get update
-        sudo apt-get install -y unzip
-        sdkmanager --install "build-tools;34.0.0"
-        export PATH=$PATH:/opt/android-sdk/build-tools/34.0.0
+        export PATH=$PATH:$HOME/android-sdk/build-tools/34.0.0
         aapt dump badging app/build/outputs/apk/debug/*.apk | grep versionName
 
     - name: Upload APK

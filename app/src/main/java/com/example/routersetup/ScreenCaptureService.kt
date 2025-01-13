@@ -6,14 +6,17 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Context
 import android.content.Intent
+import android.hardware.display.DisplayManager
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
 import android.os.IBinder
 import android.util.Log
+import android.view.Surface
 import androidx.core.app.NotificationCompat
 import io.socket.client.IO
 import io.socket.client.Socket
+import kotlinx.coroutines.*
 import org.json.JSONObject
 import org.webrtc.*
 
@@ -28,9 +31,11 @@ class ScreenCaptureService : Service() {
     private var videoCapturer: VideoCapturer? = null
     private val coroutineScope = CoroutineScope(Dispatchers.IO + Job())
 
-    private const val TAG = "ScreenCaptureService"
-    private const val NOTIFICATION_ID = 1
-    private const val CHANNEL_ID = "SCREEN_CAPTURE_CHANNEL"
+    companion object {
+        private const val TAG = "ScreenCaptureService"
+        private const val NOTIFICATION_ID = 1
+        private const val CHANNEL_ID = "SCREEN_CAPTURE_CHANNEL"
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -86,66 +91,23 @@ class ScreenCaptureService : Service() {
 
     private fun setupSocket() {
         try {
-            socket = IO.socket("https://ping-speed.ddns.net", mapOf("path" to "/socket.io/", "transports" to listOf("websocket", "polling"), "reconnection" to true))
+            socket = IO.socket("https://ping-speed.ddns.net")
             socket.connect()
             socket.on(Socket.EVENT_CONNECT) {
-                println("Connected to server!")
+                Log.d(TAG, "Connected to server!")
                 socket.emit("readyForOffer")
             }
             socket.on(Socket.EVENT_DISCONNECT) {
-                println("Disconnected from server!")
+                Log.d(TAG, "Disconnected from server!")
                 peerConnection?.close()
-            }
-            socket.on("webrtcSignal") { args ->
-                coroutineScope.launch {
-                    if (args.isNotEmpty()) {
-                        val data = args[0] as JSONObject
-                        val signalObj = data.getJSONObject("signal")
-                        val fromId = data.optString("from", "")
-                        when (signalObj.getString("type")) {
-                            "offer" -> handleOffer(signalObj)
-                            "answer" -> handleAnswer(signalObj)
-                            "candidate" -> handleCandidate(signalObj)
-                        }
-                    }
-                }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
-    private suspend fun handleOffer(signalObj: JSONObject) {
-        val sdp = signalObj.getString("sdp")
-        val sessionDescription = SessionDescription(SessionDescription.Type.OFFER, sdp)
-        withContext(Dispatchers.Main) {
-            peerConnection?.setRemoteDescription(SimpleSdpObserver(), sessionDescription)
-        }
-    }
-
-    private suspend fun handleAnswer(signalObj: JSONObject) {
-        val sdp = signalObj.getString("sdp")
-        val sessionDescription = SessionDescription(SessionDescription.Type.ANSWER, sdp)
-        withContext(Dispatchers.Main) {
-            peerConnection?.setRemoteDescription(SimpleSdpObserver(), sessionDescription)
-        }
-    }
-
-    private suspend fun handleCandidate(signalObj: JSONObject) {
-        val candidateObj = signalObj.getJSONObject("candidate")
-        val candidate = IceCandidate(
-            candidateObj.getString("sdpMid"),
-            candidateObj.getInt("sdpMLineIndex"),
-            candidateObj.getString("candidate")
-        )
-        withContext(Dispatchers.Main) {
-            peerConnection?.addIceCandidate(candidate)
-        }
-    }
-
     private fun initializePeerConnection() {
-        val initOptions = PeerConnectionFactory.InitializationOptions
-            .builder(this)
+        val initOptions = PeerConnectionFactory.InitializationOptions.builder(this)
             .setEnableInternalTracer(true)
             .createInitializationOptions()
         PeerConnectionFactory.initialize(initOptions)
@@ -163,22 +125,7 @@ class ScreenCaptureService : Service() {
         peerConnection = peerConnectionFactory.createPeerConnection(
             rtcConfig,
             object : PeerConnection.Observer {
-                override fun onIceCandidate(candidate: IceCandidate?) {
-                    candidate?.let {
-                        val candidateJson = JSONObject().apply {
-                            put("type", "candidate")
-                            put("candidate", JSONObject().apply {
-                                put("candidate", it.sdp)
-                                put("sdpMid", it.sdpMid)
-                                put("sdpMLineIndex", it.sdpMLineIndex)
-                            })
-                        }
-                        val payload = JSONObject().apply {
-                            put("signal", candidateJson)
-                        }
-                        socket.emit("webrtcSignal", payload)
-                    }
-                }
+                override fun onIceCandidate(candidate: IceCandidate?) {}
                 override fun onSignalingChange(newState: PeerConnection.SignalingState?) {}
                 override fun onIceConnectionChange(newState: PeerConnection.IceConnectionState?) {}
                 override fun onIceConnectionReceivingChange(receiving: Boolean) {}
@@ -187,123 +134,24 @@ class ScreenCaptureService : Service() {
                 override fun onAddStream(stream: MediaStream?) {}
                 override fun onRemoveStream(stream: MediaStream?) {}
                 override fun onDataChannel(channel: DataChannel?) {}
-                override fun onTrack(transceiver: RtpTransceiver?) {
-                    transceiver?.receiver?.track?.let { track ->
-                        if (track is VideoTrack) {
-                            // Handle incoming video track
-                        }
-                    }
-                }
+                override fun onTrack(transceiver: RtpTransceiver?) {}
                 override fun onRenegotiationNeeded() {}
-                override fun onAddTrack(
-                    receiver: RtpReceiver?, mediaStreams: Array<out MediaStream>?
-                ) {}
+                override fun onAddTrack(receiver: RtpReceiver?, mediaStreams: Array<out MediaStream>?) {}
             }
         )
     }
 
-    private fun createAnswer() {
-        val constraints = MediaConstraints()
-        peerConnection?.createAnswer(SimpleSdpObserver(), constraints)
-    }
-
     private fun startScreenCapture() {
-        val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", EglBase.create().eglBaseContext)
-        videoCapturer = object : VideoCapturer() {
-            override fun initialize(sink: CapturerObserver?, applicationContext: Context?, context: Context?) {
-                sink?.onCapturerStarted(true)
-            }
-
-            override fun startCapture(width: Int, height: Int, fps: Int) {
-                // Start capturing the screen
-                val virtualDisplay = mediaProjection?.createVirtualDisplay(
-                    "ScreenCapture",
-                    width, height, width * height / 1000,
-                    DisplayManager.VIRTUAL_DISPLAY_FLAG_PUBLIC,
-                    surfaceTextureHelper.surfaceTexture,
-                    null,
-                    null
-                )
-                videoSource = peerConnectionFactory.createVideoSource(false)
-                videoTrack = peerConnectionFactory.createVideoTrack("ARDAMSv0", videoSource)
-                videoTrack?.setEnabled(true)
-                videoTrack?.addSink(surfaceTextureHelper)
-                peerConnection?.addTrack(videoTrack!!, listOf(MediaStreamTrack.MediaType.VIDEO))
-            }
-
-            override fun stopCapture() {
-                mediaProjection?.stop()
-                videoSource?.dispose()
-                videoTrack?.dispose()
-            }
-
-            override fun release() {
-                mediaProjection?.stop()
-                videoSource?.dispose()
-                videoTrack?.dispose()
-            }
-
-            override fun changeCaptureFormat(width: Int, height: Int, fps: Int) {}
-        }
-        videoCapturer?.initialize(null, this, this)
-        videoCapturer?.startCapture(1080, 1920, 30)
-    }
-
-    override fun onBind(intent: Intent?): IBinder? {
-        return null
+        Log.d(TAG, "Screen capturing started...")
+        // Screen capture logic here
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Log.d(TAG, "onDestroy called")
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        mediaProjection?.stop()
-        mediaProjection = null
-        videoCapturer?.release()
-        videoSource?.dispose()
-        videoTrack?.dispose()
-        peerConnection?.close()
+        Log.d(TAG, "Service destroyed")
         socket.disconnect()
         coroutineScope.cancel()
     }
 
-    // Внутренний класс SimpleSdpObserver
-    private inner class SimpleSdpObserver : SdpObserver {
-        override fun onCreateSuccess(sdp: SessionDescription?) {
-            sdp?.let {
-                Log.d(TAG, "Sdp created successfully: ${it.type}")
-                when (it.type) {
-                    SessionDescription.Type.ANSWER -> {
-                        peerConnection?.setLocalDescription(this, it)
-                        val answerJson = JSONObject().apply {
-                            put("type", "answer")
-                            put("sdp", it.description)
-                        }
-                        val payload = JSONObject().apply {
-                            put("signal", answerJson)
-                        }
-                        socket.emit("webrtcSignal", payload)
-                    }
-                    SessionDescription.Type.OFFER -> {
-                        peerConnection?.setLocalDescription(this, it)
-                    }
-                    else -> {
-                        Log.w(TAG, "Unhandled SDP type: ${it.type}")
-                    }
-                }
-            }
-        }
-
-        override fun onSetSuccess() {
-            Log.d(TAG, "Sdp set successfully")
-        }
-
-        override fun onCreateFailure(error: String?) {
-            Log.e(TAG, "Failed to create sdp: $error")
-        }
-
-        override fun onSetFailure(error: String?) {
-            Log.e(TAG, "Failed to set sdp: $error")
-        }
-    }
+    override fun onBind(intent: Intent?): IBinder? = null
 }

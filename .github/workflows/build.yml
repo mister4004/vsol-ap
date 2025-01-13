@@ -30,6 +30,7 @@ jobs:
         mv $HOME/android-sdk/cmdline-tools/cmdline-tools $HOME/android-sdk/cmdline-tools/latest
         export ANDROID_HOME=$HOME/android-sdk
         export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$PATH
+        yes | sdkmanager --licenses
         sdkmanager --install "build-tools;34.0.0" "platform-tools" "platforms;android-34"
 
     - name: Cache Gradle dependencies
@@ -48,7 +49,7 @@ jobs:
 
     - name: Verify APK version
       run: |
-        export PATH=$PATH:$HOME/android-sdk/build-tools/34.0.0
+        export PATH=$HOME/android-sdk/build-tools/34.0.0:$PATH
         aapt dump badging app/build/outputs/apk/debug/*.apk | grep versionName
 
     - name: Upload APK

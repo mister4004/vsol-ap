@@ -21,13 +21,11 @@ class ScreenCaptureService : Service() {
     override fun onCreate() {
         super.onCreate()
         projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-        startForegroundService()
+        startForegroundServiceWithNotification()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        startForegroundService()
-
-        val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: return START_STICKY
+        val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: return START_NOT_STICKY
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra("data", Intent::class.java)
         } else {
@@ -37,15 +35,15 @@ class ScreenCaptureService : Service() {
 
         if (resultCode == Activity.RESULT_OK && data != null) {
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            // Начать захват экрана или инициализировать WebRTC здесь
+            // Здесь начните захват экрана или инициализируйте WebRTC
         } else {
             stopSelf()
         }
 
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
-    private fun startForegroundService() {
+    private fun startForegroundServiceWithNotification() {
         val channelId = "ScreenCaptureChannel"
         val channelName = "Screen Capture Service"
 
@@ -63,6 +61,7 @@ class ScreenCaptureService : Service() {
             .setContentTitle("Screen Capture Service")
             .setContentText("Screen capturing is running...")
             .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
             .build()
 
         startForeground(1, notification)
@@ -76,5 +75,6 @@ class ScreenCaptureService : Service() {
         super.onDestroy()
         stopForeground(STOP_FOREGROUND_REMOVE)
         mediaProjection?.stop()
+        mediaProjection = null
     }
 }

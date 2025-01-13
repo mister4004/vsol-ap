@@ -17,6 +17,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.routersetup.ui.theme.RouterSetupTheme
+import android.app.NotificationChannel
+import android.app.NotificationManager
 
 class RouterSetupActivity : ComponentActivity() {
     private lateinit var projectionManager: MediaProjectionManager

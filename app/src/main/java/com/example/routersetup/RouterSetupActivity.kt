@@ -20,6 +20,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.routersetup.ui.theme.RouterSetupTheme
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import androidx.core.content.ContextCompat
 
 class RouterSetupActivity : ComponentActivity() {
     private lateinit var projectionManager: MediaProjectionManager
@@ -27,6 +28,7 @@ class RouterSetupActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         // Create Notification Channel for Foreground Service
         val channel = NotificationChannel(
             "SCREEN_CAPTURE_CHANNEL",
@@ -35,21 +37,25 @@ class RouterSetupActivity : ComponentActivity() {
         )
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(channel)
+
         projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+
         screenCaptureLauncher = registerForActivityResult(
             ActivityResultContracts.StartActivityForResult()
         ) { result ->
             if (result.resultCode == Activity.RESULT_OK) {
                 val data = result.data
                 // Start Foreground Service
-                val serviceIntent = Intent(this, ScreenCaptureService::class.java)
-                serviceIntent.putExtra("code", result.resultCode)
-                serviceIntent.putExtra("data", data)
-                startForegroundService(serviceIntent)
+                val serviceIntent = Intent(this, ScreenCaptureService::class.java).apply {
+                    putExtra("code", result.resultCode)
+                    putExtra("data", data)
+                }
+                ContextCompat.startForegroundService(this, serviceIntent)
             } else {
                 println("Permission denied for screen capture")
             }
         }
+
         setContent {
             RouterSetupTheme {
                 MainScreenUI(

@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.routersetup"
-        minSdk = 28
+        minSdk = 31 // Минимальная версия SDK для Android 12
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -45,7 +45,7 @@ dependencies {
     // Socket.IO
     implementation("io.socket:socket.io-client:2.0.1")
 
-    // WebRTC (локальный .aar-файл)
+    // WebRTC
     implementation(files("libs/google-webrtc-1.0.32006.aar"))
 
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")

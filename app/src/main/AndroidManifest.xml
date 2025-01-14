@@ -32,6 +32,7 @@
             android:name=".ScreenCaptureService"
             android:exported="false"
             android:foregroundServiceType="mediaProjection"
-            android:permission="android.permission.FOREGROUND_SERVICE" />
+            tools:ignore="UnusedAttribute">
+        </service>
     </application>
 </manifest>

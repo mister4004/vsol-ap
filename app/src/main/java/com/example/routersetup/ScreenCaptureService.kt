@@ -1,11 +1,6 @@
 package com.example.routersetup
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.app.Service
-import android.app.ServiceInfo
-import android.app.Activity
+import android.app.*
 import android.content.Context
 import android.content.Intent
 import android.media.projection.MediaProjection
@@ -43,23 +38,17 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand called")
+
         val notification = createNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(
-                NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
-            )
-        } else {
-            startForeground(NOTIFICATION_ID, notification)
-        }
+        startForeground(
+            NOTIFICATION_ID,
+            notification,
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+        )
+
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: return START_NOT_STICKY
-        val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            intent.getParcelableExtra("data", Intent::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            intent.getParcelableExtra("data")
-        }
+        val data = intent.getParcelableExtra<Intent>("data")
+
         if (resultCode == Activity.RESULT_OK && data != null) {
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
             Log.d(TAG, "MediaProjection obtained successfully")
@@ -72,15 +61,14 @@ class ScreenCaptureService : Service() {
     }
 
     private fun createNotification(): Notification {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Screen Capture Service",
-                NotificationManager.IMPORTANCE_LOW
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Screen Capture Service",
+            NotificationManager.IMPORTANCE_LOW
+        )
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(channel)
+
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Screen Capture Service")
             .setContentText("Screen capturing is running...")

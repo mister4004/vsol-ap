@@ -26,58 +26,43 @@ class ScreenCaptureService : Service() {
     private lateinit var projectionManager: MediaProjectionManager
     private var mediaProjection: MediaProjection? = null
 
-    // WebRTC
     private lateinit var peerConnectionFactory: PeerConnectionFactory
     private var peerConnection: PeerConnection? = null
 
-    // Для сигналинга
     private lateinit var socket: Socket
-    private var adminSocketId: String? = null  // чтобы знать, кому отправлять сигнал
+    private var adminSocketId: String? = null
 
-    // Чтобы не блокировать главный поток
     private val serviceScope = CoroutineScope(Dispatchers.IO + Job())
 
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate()")
-
-        // 1) Инициализируем MediaProjectionManager
         projectionManager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
-
-        // 2) Инициализируем PeerConnectionFactory (WebRTC)
         initializePeerConnectionFactory()
-
-        // 3) Подключаемся к Socket.IO (сигналинг)
         setupSocket()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
 
-        // Создаём уведомление для foreground
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            // Android 10+ требует foregroundServiceType=mediaProjection
             startForeground(NOTIF_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
         } else {
             startForeground(NOTIF_ID, notification)
         }
 
-        // Достаём resultCode/data
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: Activity.RESULT_CANCELED
         val data = intent?.getParcelableExtra<Intent>("data")
         if (resultCode == Activity.RESULT_OK && data != null) {
-            // Получаем MediaProjection
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
             if (mediaProjection == null) {
                 Log.e(TAG, "mediaProjection is null!")
                 stopSelf()
             } else {
                 Log.d(TAG, "MediaProjection obtained successfully")
-
-                // Запускаем захват экрана и создаём PeerConnection
                 startScreenCapture()
-                createOffer()  // Мы инициатор, генерируем оффер
+                createOffer()
             }
         } else {
             Log.e(TAG, "MediaProjection not obtained (resultCode=$resultCode). Stopping service.")
@@ -87,9 +72,6 @@ class ScreenCaptureService : Service() {
         return START_NOT_STICKY
     }
 
-    /**
-     * Создаём канал уведомлений, возвращаем само Notification
-     */
     private fun createNotification(): Notification {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -108,9 +90,6 @@ class ScreenCaptureService : Service() {
             .build()
     }
 
-    /**
-     * Инициализируем PeerConnectionFactory
-     */
     private fun initializePeerConnectionFactory() {
         val initOptions = PeerConnectionFactory.InitializationOptions
             .builder(this)
@@ -123,23 +102,19 @@ class ScreenCaptureService : Service() {
             .createPeerConnectionFactory()
     }
 
-    /**
-     * Подключаемся к Socket.IO, слушаем 'webrtcSignal' от админа
-     */
     private fun setupSocket() {
         try {
-            socket = IO.socket("https://ping-speed.ddns.net") // ваш сервер
+            socket = IO.socket("https://ping-speed.ddns.net")
             socket.connect()
             socket.on(Socket.EVENT_CONNECT) {
                 Log.d(TAG, "Socket.IO connected!")
-                socket.emit("readyForOffer") // говорим, что клиент готов
+                socket.emit("readyForOffer")
             }
             socket.on(Socket.EVENT_DISCONNECT) {
                 Log.d(TAG, "Socket.IO disconnected.")
                 peerConnection?.close()
             }
 
-            // Принимаем от админа answer, ice-candidate и т.д.
             socket.on("webrtcSignal") { args ->
                 serviceScope.launch {
                     if (args.isNotEmpty()) {
@@ -166,51 +141,39 @@ class ScreenCaptureService : Service() {
         }
     }
 
-    /**
-     * Запускаем захват экрана (ScreenCapturerAndroid) + добавляем track в peerConnection
-     */
     private fun startScreenCapture() {
         if (mediaProjection == null) {
             Log.e(TAG, "mediaProjection == null, cannot start capture!")
             return
         }
-        // 1) ScreenCapturer
         val callback = object : MediaProjection.Callback() {
             override fun onStop() {
                 Log.d(TAG, "MediaProjection stopped.")
             }
         }
-        val screenCapturer = ScreenCapturerAndroid(mediaProjection, callback)
+        val screenCapturer = ScreenCapturerAndroid(mediaProjection!!, callback)
 
-        // 2) Создаём surfaceTextureHelper + VideoSource
         val eglBase = EglBase.create()
         val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
-        val videoSource = peerConnectionFactory.createVideoSource(false) // disableCpuOveruseDetection=false?
+        val videoSource = peerConnectionFactory.createVideoSource(false)
 
         screenCapturer.initialize(
             surfaceTextureHelper,
             applicationContext,
             videoSource.capturerObserver
         )
-        // 3) Стартуем захват 720p@30
         screenCapturer.startCapture(720, 1280, 30)
 
-        // 4) Создаём track
         val videoTrack = peerConnectionFactory.createVideoTrack("screenTrack", videoSource)
-        // 5) Создаём localStream
         val localStream = peerConnectionFactory.createLocalMediaStream("localStream")
         localStream.addTrack(videoTrack)
 
-        // Если peerConnection ещё не создан — создадим
         if (peerConnection == null) {
             createPeerConnection()
         }
         peerConnection?.addStream(localStream)
     }
 
-    /**
-     * Создаём peerConnection
-     */
     private fun createPeerConnection() {
         Log.d(TAG, "createPeerConnection()")
         val iceServers = listOf(
@@ -263,9 +226,6 @@ class ScreenCaptureService : Service() {
         })
     }
 
-    /**
-     * Мы выступаем инициатором — генерируем offer
-     */
     private fun createOffer() {
         Log.d(TAG, "createOffer()")
         if (peerConnection == null) {
@@ -276,7 +236,6 @@ class ScreenCaptureService : Service() {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 Log.d(TAG, "createOffer success: $desc")
                 peerConnection?.setLocalDescription(object : SimpleSdpObserver() {}, desc)
-                // Отправляем sdp админу
                 val offerJson = JSONObject().apply {
                     put("type", "offer")
                     put("sdp", desc?.description)
@@ -293,9 +252,6 @@ class ScreenCaptureService : Service() {
         }, constraints)
     }
 
-    /**
-     * Пришёл answer от админа
-     */
     private suspend fun handleAnswer(signalObj: JSONObject) {
         val sdp = signalObj.getString("sdp")
         val sessionDescription = SessionDescription(SessionDescription.Type.ANSWER, sdp)
@@ -311,9 +267,6 @@ class ScreenCaptureService : Service() {
         }
     }
 
-    /**
-     * Пришёл candidate от админа
-     */
     private suspend fun handleCandidate(signalObj: JSONObject) {
         val candidateObj = signalObj.getJSONObject("candidate")
         val candidate = IceCandidate(
@@ -339,9 +292,6 @@ class ScreenCaptureService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 }
 
-/**
- * Простой SdpObserver
- */
 abstract class SimpleSdpObserver : SdpObserver {
     override fun onCreateSuccess(sdp: SessionDescription?) {}
     override fun onSetSuccess() {}

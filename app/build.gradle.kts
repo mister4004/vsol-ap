@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.routersetup"
-        minSdk = 31 // Android 12
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -18,36 +18,31 @@ android {
     buildFeatures {
         compose = true
     }
+
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.4"
     }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
 }
 
 dependencies {
-    val composeVersion = "1.5.1"
-
-    // Compose
+    val composeVersion = "1.5.4"
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
     implementation("androidx.compose.material3:material3:1.1.1")
-
-    // Socket.IO
     implementation("io.socket:socket.io-client:2.0.1")
-
-    // WebRTC (локальный .aar-файл)
     implementation(files("libs/google-webrtc-1.0.32006.aar"))
-
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
     testImplementation("junit:junit:4.13.2")

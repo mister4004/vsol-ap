@@ -43,7 +43,6 @@ class ScreenCaptureService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand called")
-
         val notification = createNotification()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
@@ -54,7 +53,6 @@ class ScreenCaptureService : Service() {
         } else {
             startForeground(NOTIFICATION_ID, notification)
         }
-
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: return START_NOT_STICKY
         val data = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             intent.getParcelableExtra("data", Intent::class.java)
@@ -62,7 +60,6 @@ class ScreenCaptureService : Service() {
             @Suppress("DEPRECATION")
             intent.getParcelableExtra("data")
         }
-
         if (resultCode == Activity.RESULT_OK && data != null) {
             mediaProjection = projectionManager.getMediaProjection(resultCode, data)
             Log.d(TAG, "MediaProjection obtained successfully")

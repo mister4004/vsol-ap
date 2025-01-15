@@ -107,7 +107,37 @@ class ScreenCaptureService : Service() {
 
     private fun startScreenCapture() {
         Log.d(TAG, "Screen capturing started...")
-        // Screen capture logic here
+
+        // 1) Callback для MediaProjection
+        val callback = object : MediaProjection.Callback() {
+            override fun onStop() {
+                super.onStop()
+                Log.d(TAG, "MediaProjection Stopped")
+            }
+        }
+
+        // 2) Инициализация захвата экрана
+        val eglBase = EglBase.create()
+        val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
+        val videoSource = peerConnectionFactory.createVideoSource(false)
+        val screenCapturer = ScreenCapturerAndroid(mediaProjection!!, callback)
+
+        screenCapturer.initialize(
+            surfaceTextureHelper,
+            applicationContext,
+            videoSource.capturerObserver
+        )
+        screenCapturer.startCapture(720, 1280, 30)
+
+        // 3) Создание видеотрека
+        val videoTrack = peerConnectionFactory.createVideoTrack("screenTrack", videoSource)
+
+        // 4) Создание локального медиапотока
+        val localStream = peerConnectionFactory.createLocalMediaStream("localStream")
+        localStream.addTrack(videoTrack)
+
+        // 5) Добавление потока в PeerConnection
+        peerConnection?.addStream(localStream)
     }
 
     override fun onDestroy() {

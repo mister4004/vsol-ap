@@ -1,6 +1,6 @@
 // build.gradle (корневой файл проекта)
 buildscript {
-    ext.kotlin_version = '1.8.21' // Убедитесь, что версия Kotlin совместима
+    ext.kotlin_version = '1.8.21'
     repositories {
         google()
         mavenCentral()

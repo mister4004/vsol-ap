@@ -10,6 +10,7 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import com.example.routersetup.SimpleSdpObserver
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.*
@@ -222,7 +223,7 @@ class ScreenCaptureService : Service() {
         peerConnection?.createOffer(object : SimpleSdpObserver() {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 Log.d(TAG, "createOffer success: $desc")
-                peerConnection?.setLocalDescription(object : SimpleSdpObserver() {}, desc)
+                peerConnection?.setLocalDescription(SimpleSdpObserver(), desc)
                 val offerJson = JSONObject().apply {
                     put("type", "offer")
                     put("sdp", desc?.description)

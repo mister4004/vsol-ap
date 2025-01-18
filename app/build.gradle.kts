@@ -21,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3" // Совместимая версия Compose Compiler
+        kotlinCompilerExtensionVersion = "1.5.13" // Совместимая версия Compose Compiler
     }
 
     compileOptions {

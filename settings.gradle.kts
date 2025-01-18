@@ -6,11 +6,12 @@ pluginManagement {
     }
     plugins {
         id("com.android.application") version "8.1.1"
-        id("org.jetbrains.kotlin.android") version "1.9.0"
+        id("org.jetbrains.kotlin.android") version "1.9.20"
     }
 }
 
 dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_PROJECT)
     repositories {
         google()
         mavenCentral()

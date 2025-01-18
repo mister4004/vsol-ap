@@ -1,5 +1,3 @@
-// app/build.gradle.kts
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -23,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.15"
+        kotlinCompilerExtensionVersion = "1.5.15" // Исправлено на актуальную версию
     }
 
     compileOptions {
@@ -41,7 +39,7 @@ android {
 }
 
 dependencies {
-    val composeVersion = "1.5.4"
+    val composeVersion = "1.5.15" // Актуальная версия Compose Compiler
     val webrtcVersion = "1.0.32006"
 
     // AndroidX и Compose

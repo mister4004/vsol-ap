@@ -53,19 +53,39 @@ class ScreenCaptureService : Service() {
         }
 
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: Activity.RESULT_CANCELED
-        val data = intent?.getParcelableExtra<Intent>("data")
-        if (resultCode == Activity.RESULT_OK && data != null) {
-            mediaProjection = projectionManager.getMediaProjection(resultCode, data)
-            if (mediaProjection == null) {
-                Log.e(TAG, "mediaProjection is null!")
-                stopSelf()
-            } else {
-                Log.d(TAG, "MediaProjection obtained successfully")
-                startScreenCapture()
-                createOffer()
+        val dataIntent = intent?.getParcelableExtra<Intent>("data") // Берём Intent из результата
+
+        if (resultCode == Activity.RESULT_OK && dataIntent != null) {
+            val callback = object : MediaProjection.Callback() {
+                override fun onStop() {
+                    Log.d(TAG, "MediaProjection stopped.")
+                }
             }
+            // Передаём dataIntent в конструктор ScreenCapturerAndroid
+            val screenCapturer = ScreenCapturerAndroid(dataIntent, callback)
+
+            // Настраиваем захват экрана и WebRTC
+            val eglBase = EglBase.create()
+            val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
+            val videoSource = peerConnectionFactory.createVideoSource(false)
+
+            screenCapturer.initialize(
+                surfaceTextureHelper,
+                applicationContext,
+                videoSource.capturerObserver
+            )
+            screenCapturer.startCapture(720, 1280, 30)
+
+            val videoTrack = peerConnectionFactory.createVideoTrack("screenTrack", videoSource)
+            val localStream = peerConnectionFactory.createLocalMediaStream("localStream")
+            localStream.addTrack(videoTrack)
+
+            if (peerConnection == null) {
+                createPeerConnection()
+            }
+            peerConnection?.addStream(localStream)
         } else {
-            Log.e(TAG, "MediaProjection not obtained (resultCode=$resultCode). Stopping service.")
+            Log.e(TAG, "MediaProjection not obtained. Stopping service.")
             stopSelf()
         }
 
@@ -139,39 +159,6 @@ class ScreenCaptureService : Service() {
         } catch (e: Exception) {
             e.printStackTrace()
         }
-    }
-
-    private fun startScreenCapture() {
-        if (mediaProjection == null) {
-            Log.e(TAG, "mediaProjection == null, cannot start capture!")
-            return
-        }
-        val callback = object : MediaProjection.Callback() {
-            override fun onStop() {
-                Log.d(TAG, "MediaProjection stopped.")
-            }
-        }
-        val screenCapturer = ScreenCapturerAndroid(mediaProjection!!, callback)
-
-        val eglBase = EglBase.create()
-        val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
-        val videoSource = peerConnectionFactory.createVideoSource(false)
-
-        screenCapturer.initialize(
-            surfaceTextureHelper,
-            applicationContext,
-            videoSource.capturerObserver
-        )
-        screenCapturer.startCapture(720, 1280, 30)
-
-        val videoTrack = peerConnectionFactory.createVideoTrack("screenTrack", videoSource)
-        val localStream = peerConnectionFactory.createLocalMediaStream("localStream")
-        localStream.addTrack(videoTrack)
-
-        if (peerConnection == null) {
-            createPeerConnection()
-        }
-        peerConnection?.addStream(localStream)
     }
 
     private fun createPeerConnection() {
@@ -290,11 +277,4 @@ class ScreenCaptureService : Service() {
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
-}
-
-abstract class SimpleSdpObserver : SdpObserver {
-    override fun onCreateSuccess(sdp: SessionDescription?) {}
-    override fun onSetSuccess() {}
-    override fun onCreateFailure(error: String?) {}
-    override fun onSetFailure(error: String?) {}
 }

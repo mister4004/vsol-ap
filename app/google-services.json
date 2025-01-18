@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "743988801394",
+    "project_id": "routersetup-f4edf",
+    "storage_bucket": "routersetup-f4edf.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:743988801394:android:b403ea6155cd968ea3b7eb",
+        "android_client_info": {
+          "package_name": "com.example.routersetup"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEXi-787tiwgpqmNDEDJQtfob8PIAhH3c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

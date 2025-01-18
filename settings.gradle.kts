@@ -6,7 +6,7 @@ pluginManagement {
     }
     plugins {
         id("com.android.application") version "8.1.1"
-        id("org.jetbrains.kotlin.android") version "1.9.10" // Обновлено
+        id("org.jetbrains.kotlin.android") version "1.9.10" // Понизить до совместимой версии
     }
 }
 

@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.IBinder
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import com.example.routersetup.SimpleSdpObserver
 import io.socket.client.IO
 import io.socket.client.Socket
 import kotlinx.coroutines.*
@@ -220,10 +219,22 @@ class ScreenCaptureService : Service() {
             createPeerConnection()
         }
         val constraints = MediaConstraints()
-        peerConnection?.createOffer(object : SimpleSdpObserver() {
+        peerConnection?.createOffer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
                 Log.d(TAG, "createOffer success: $desc")
-                peerConnection?.setLocalDescription(SimpleSdpObserver(), desc)
+                peerConnection?.setLocalDescription(object : SdpObserver {
+                    override fun onSetSuccess() {
+                        Log.d(TAG, "Set local description successfully.")
+                    }
+
+                    override fun onSetFailure(error: String?) {
+                        Log.e(TAG, "Failed to set local description: $error")
+                    }
+
+                    override fun onCreateSuccess(sdp: SessionDescription?) {}
+
+                    override fun onCreateFailure(error: String?) {}
+                }, desc)
                 val offerJson = JSONObject().apply {
                     put("type", "offer")
                     put("sdp", desc?.description)
@@ -234,9 +245,14 @@ class ScreenCaptureService : Service() {
                 }
                 socket.emit("webrtcSignal", payload)
             }
+
             override fun onCreateFailure(error: String?) {
                 Log.e(TAG, "createOffer failure: $error")
             }
+
+            override fun onSetSuccess() {}
+
+            override fun onSetFailure(error: String?) {}
         }, constraints)
     }
 
@@ -244,13 +260,17 @@ class ScreenCaptureService : Service() {
         val sdp = signalObj.getString("sdp")
         val sessionDescription = SessionDescription(SessionDescription.Type.ANSWER, sdp)
         withContext(Dispatchers.Main) {
-            peerConnection?.setRemoteDescription(object : SimpleSdpObserver() {
+            peerConnection?.setRemoteDescription(object : SdpObserver {
                 override fun onSetSuccess() {
                     Log.d(TAG, "Remote ANSWER setSuccess()")
                 }
                 override fun onSetFailure(error: String?) {
                     Log.e(TAG, "Remote ANSWER setFailure: $error")
                 }
+
+                override fun onCreateSuccess(sdp: SessionDescription?) {}
+
+                override fun onCreateFailure(error: String?) {}
             }, sessionDescription)
         }
     }

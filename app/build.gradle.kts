@@ -1,7 +1,9 @@
+// app/build.gradle.kts
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services") // Подключаем плагин Google Services
+    id("com.google.gms.google-services") // Применяем плагин Google Services
 }
 
 android {
@@ -10,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.mycompany.routersetup" // Уникальный applicationId
-        minSdk = 31 // Android 12
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -55,6 +57,9 @@ dependencies {
 
     // WebRTC
     implementation(files("libs/google-webrtc-$webrtcVersion.aar")) // Локальная библиотека WebRTC
+
+    // Firebase BoM (Bill of Materials)
+    implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
 
     // Firebase Analytics
     implementation("com.google.firebase:firebase-analytics-ktx")

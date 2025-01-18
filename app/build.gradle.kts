@@ -1,15 +1,15 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services") // Применяем плагин Google Services
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.routersetup" // Исправлено namespace
+    namespace = "com.example.routersetup"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.routersetup" // Исправлено applicationId
+        applicationId = "com.example.routersetup"
         minSdk = 31
         targetSdk = 34
         versionCode = 1
@@ -21,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1" // Последняя стабильная версия
+        kotlinCompilerExtensionVersion = "1.5.3" // Обновлено для совместимости с Kotlin 1.9.25
     }
 
     compileOptions {
@@ -34,12 +34,12 @@ android {
     }
 
     packagingOptions {
-        resources.excludes.add("META-INF/*.kotlin_module") // Исключение конфликта библиотек
+        resources.excludes.add("META-INF/*.kotlin_module")
     }
 }
 
 dependencies {
-    val composeVersion = "1.5.1" // Последняя стабильная версия
+    val composeVersion = "1.5.3" // Обновлено для совместимости с Compiler 1.5.3
     val webrtcVersion = "1.0.32006"
 
     // AndroidX и Compose
@@ -54,7 +54,7 @@ dependencies {
     implementation("io.socket:socket.io-client:2.0.1")
 
     // WebRTC
-    implementation(files("libs/google-webrtc-$webrtcVersion.aar")) // Локальная библиотека WebRTC
+    implementation(files("libs/google-webrtc-$webrtcVersion.aar"))
 
     // Firebase BoM (Bill of Materials)
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))

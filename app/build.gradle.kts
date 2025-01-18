@@ -31,18 +31,31 @@ android {
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
+    packagingOptions {
+        resources.excludes.add("META-INF/*.kotlin_module") // Исключение конфликта библиотек
+    }
 }
 
 dependencies {
     val composeVersion = "1.5.4"
+    val webrtcVersion = "1.0.32006"
+
+    // AndroidX и Compose
     implementation("androidx.core:core-ktx:1.10.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.7.2")
     implementation("androidx.compose.ui:ui:$composeVersion")
     implementation("androidx.compose.ui:ui-tooling-preview:$composeVersion")
     implementation("androidx.compose.material3:material3:1.1.1")
+
+    // Socket.IO
     implementation("io.socket:socket.io-client:2.0.1")
-    implementation(files("libs/google-webrtc-1.0.32006.aar"))
+
+    // WebRTC
+    implementation(files("libs/google-webrtc-$webrtcVersion.aar")) // Локальная библиотека WebRTC
+
+    // Для отладки и тестов
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")
     debugImplementation("androidx.compose.ui:ui-test-manifest:$composeVersion")
     testImplementation("junit:junit:4.13.2")

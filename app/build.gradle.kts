@@ -1,14 +1,15 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("com.google.gms.google-services") // Подключаем плагин Google Services
 }
 
 android {
-    namespace = "com.example.routersetup"
+    namespace = "com.mycompany.routersetup" // Обновлённое namespace
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.routersetup"
+        applicationId = "com.mycompany.routersetup" // Уникальный applicationId
         minSdk = 31 // Android 12
         targetSdk = 34
         versionCode = 1
@@ -54,6 +55,9 @@ dependencies {
 
     // WebRTC
     implementation(files("libs/google-webrtc-$webrtcVersion.aar")) // Локальная библиотека WebRTC
+
+    // Firebase Analytics
+    implementation("com.google.firebase:firebase-analytics-ktx")
 
     // Для отладки и тестов
     debugImplementation("androidx.compose.ui:ui-tooling:$composeVersion")

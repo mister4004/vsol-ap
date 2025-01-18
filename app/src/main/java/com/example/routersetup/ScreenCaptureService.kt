@@ -53,7 +53,7 @@ class ScreenCaptureService : Service() {
         }
 
         val resultCode = intent?.getIntExtra("code", Activity.RESULT_CANCELED) ?: Activity.RESULT_CANCELED
-        val dataIntent = intent?.getParcelableExtra<Intent>("data") // Берём Intent из результата
+        val dataIntent = intent?.getParcelableExtra<Intent>("data")
 
         if (resultCode == Activity.RESULT_OK && dataIntent != null) {
             val callback = object : MediaProjection.Callback() {
@@ -61,10 +61,8 @@ class ScreenCaptureService : Service() {
                     Log.d(TAG, "MediaProjection stopped.")
                 }
             }
-            // Передаём dataIntent в конструктор ScreenCapturerAndroid
             val screenCapturer = ScreenCapturerAndroid(dataIntent, callback)
 
-            // Настраиваем захват экрана и WebRTC
             val eglBase = EglBase.create()
             val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
             val videoSource = peerConnectionFactory.createVideoSource(false)
@@ -146,6 +144,7 @@ class ScreenCaptureService : Service() {
                         }
                         val type = signalObj.getString("type")
                         when (type) {
+                            "offer" -> handleOffer(signalObj)
                             "answer" -> handleAnswer(signalObj)
                             "candidate" -> handleCandidate(signalObj)
                             else -> {
@@ -213,47 +212,64 @@ class ScreenCaptureService : Service() {
         })
     }
 
-    private fun createOffer() {
-        Log.d(TAG, "createOffer()")
-        if (peerConnection == null) {
-            createPeerConnection()
-        }
+    private fun createAnswer() {
         val constraints = MediaConstraints()
-        peerConnection?.createOffer(object : SdpObserver {
+        peerConnection?.createAnswer(object : SdpObserver {
             override fun onCreateSuccess(desc: SessionDescription?) {
-                Log.d(TAG, "createOffer success: $desc")
+                Log.d(TAG, "createAnswer success: $desc")
                 peerConnection?.setLocalDescription(object : SdpObserver {
                     override fun onSetSuccess() {
-                        Log.d(TAG, "Set local description successfully.")
+                        Log.d(TAG, "Set local description for ANSWER success")
                     }
 
                     override fun onSetFailure(error: String?) {
-                        Log.e(TAG, "Failed to set local description: $error")
+                        Log.e(TAG, "Set local description for ANSWER failed: $error")
                     }
 
                     override fun onCreateSuccess(sdp: SessionDescription?) {}
 
                     override fun onCreateFailure(error: String?) {}
                 }, desc)
-                val offerJson = JSONObject().apply {
-                    put("type", "offer")
+
+                val answerJson = JSONObject().apply {
+                    put("type", "answer")
                     put("sdp", desc?.description)
                 }
                 val payload = JSONObject().apply {
-                    put("signal", offerJson)
+                    put("signal", answerJson)
                     put("targetId", adminSocketId)
                 }
                 socket.emit("webrtcSignal", payload)
             }
 
             override fun onCreateFailure(error: String?) {
-                Log.e(TAG, "createOffer failure: $error")
+                Log.e(TAG, "createAnswer failure: $error")
             }
 
             override fun onSetSuccess() {}
-
             override fun onSetFailure(error: String?) {}
         }, constraints)
+    }
+
+    private suspend fun handleOffer(signalObj: JSONObject) {
+        val sdp = signalObj.getString("sdp")
+        val offerDesc = SessionDescription(SessionDescription.Type.OFFER, sdp)
+        withContext(Dispatchers.Main) {
+            peerConnection?.setRemoteDescription(object : SdpObserver {
+                override fun onSetSuccess() {
+                    Log.d(TAG, "Remote OFFER setSuccess()")
+                    createAnswer()
+                }
+
+                override fun onSetFailure(error: String?) {
+                    Log.e(TAG, "Remote OFFER setFailure: $error")
+                }
+
+                override fun onCreateSuccess(sdp: SessionDescription?) {}
+
+                override fun onCreateFailure(error: String?) {}
+            }, offerDesc)
+        }
     }
 
     private suspend fun handleAnswer(signalObj: JSONObject) {
@@ -264,6 +280,7 @@ class ScreenCaptureService : Service() {
                 override fun onSetSuccess() {
                     Log.d(TAG, "Remote ANSWER setSuccess()")
                 }
+
                 override fun onSetFailure(error: String?) {
                     Log.e(TAG, "Remote ANSWER setFailure: $error")
                 }

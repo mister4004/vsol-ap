@@ -7,11 +7,11 @@ plugins {
 }
 
 android {
-    namespace = "com.mycompany.routersetup" // Обновлённое namespace
+    namespace = "com.example.routersetup" // Исправлено namespace
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.mycompany.routersetup" // Уникальный applicationId
+        applicationId = "com.example.routersetup" // Исправлено applicationId
         minSdk = 31
         targetSdk = 34
         versionCode = 1

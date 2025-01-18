@@ -21,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3" // Совместимая версия
+        kotlinCompilerExtensionVersion = "1.5.3" // Совместимая версия Compose Compiler
     }
 
     compileOptions {
@@ -39,7 +39,7 @@ android {
 }
 
 dependencies {
-    val composeVersion = "1.5.3" // Обновлено
+    val composeVersion = "1.5.1" // Совместимая версия Compose UI
     val webrtcVersion = "1.0.32006"
 
     // AndroidX и Compose
@@ -56,7 +56,7 @@ dependencies {
     // WebRTC
     implementation(files("libs/google-webrtc-$webrtcVersion.aar"))
 
-    // Firebase BoM (Bill of Materials)
+    // Firebase BoM
     implementation(platform("com.google.firebase:firebase-bom:33.8.0"))
 
     // Firebase Analytics

@@ -21,7 +21,7 @@ android {
     }
 
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.3" // Обновлено для совместимости с Kotlin 1.9.25
+        kotlinCompilerExtensionVersion = "1.5.3" // Совместимая версия
     }
 
     compileOptions {
@@ -39,7 +39,7 @@ android {
 }
 
 dependencies {
-    val composeVersion = "1.5.3" // Обновлено для совместимости с Compiler 1.5.3
+    val composeVersion = "1.5.3" // Обновлено
     val webrtcVersion = "1.0.32006"
 
     // AndroidX и Compose

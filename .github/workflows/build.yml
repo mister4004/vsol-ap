@@ -44,6 +44,15 @@ jobs:
     - name: Set executable permissions for Gradlew
       run: chmod +x ./gradlew
 
+    - name: List Gradle Dependencies
+      run: ./gradlew dependencies > dependencies.txt
+
+    - name: Upload Dependencies Report
+      uses: actions/upload-artifact@v3
+      with:
+        name: Gradle Dependencies
+        path: dependencies.txt
+
     - name: Clean and Build with Gradle
       run: ./gradlew clean assembleDebug
 
